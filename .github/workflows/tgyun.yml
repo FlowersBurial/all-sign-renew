@@ -20,16 +20,27 @@ jobs:
       env:
         TGYUN_USERPASSWD: ${{ secrets.TGYUN_USERPASSWD }}
       run: |
+        # 解析多个用户密码对
         IFS=',' read -r -a upds <<< "$TGYUN_USERPASSWD"
 
+        # 循环每个用户密码进行登录和签到
         for upd in "${upds[@]}"; do
-          curl -s -c "ck.tgy" -X POST "https://www.tanggaoyun.com/login?action=email" -d $upd
+          # 登录
+          curl -s -c "ck.tgy" -X POST "https://www.tanggaoyun.com/login?action=email" -d "$upd"
+          
+          # 获取当前时间戳
           timestamp=$(date +%s)
-          response=$(curl -s -b 'ck.tgy' 'https://www.tanggaoyun.com/addons?_plugin=58&_controller=index&_action=qd' -X 'POST' -H 'x-requested-with: XMLHttpRequest' -d -d '{"timestamp": '"$timestamp"'}')
+
+          # 发送签到请求，并将时间戳添加到请求体中
+          response=$(curl -s -b 'ck.tgy' 'https://www.tanggaoyun.com/addons?_plugin=58&_controller=index&_action=qd' -X 'POST' -H 'x-requested-with: XMLHttpRequest' -d "timestamp=$timestamp")
+
+          # 清理 cookies
           rm -rf ck.tgy
+
+          # 检查返回内容是否包含 'code:1'，表示签到成功
           if echo "$response" | grep -q '"code":1'; then
-            echo "签到成功"
+            echo "签到成功，时间戳：$timestamp"
           else
-            echo "内容返回 : $response"
+            echo "签到失败，内容返回 : $response"
           fi
         done
