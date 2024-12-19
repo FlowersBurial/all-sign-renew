@@ -5,11 +5,51 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 22 * * *' # 每天一次，UTC 时间晚上 10 点运行（即北京时间早上 6 点）
+    - cron: '34 12 * * *'  # 初始占位时间，每天 UTC 时间 22:00 运行
   workflow_dispatch:
 
 jobs:
+  adjust-next-cron:
+    if: github.event_name == 'schedule' # 仅在调度触发时运行
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Calculate next execution time (22h cooldown + random time)
+      id: calculate-next-cron
+      run: |
+        # 获取当前时间（UTC）
+        CURRENT_TIME=$(date -u +'%s')
+        
+        # 冷却时间为 22 小时（秒）
+        COOL_DOWN_TIME=$((22 * 3600))
+        
+        # 随机时间范围为 22 到 30 小时之间（秒）
+        RANDOM_EXTRA_TIME=$(( (22 + RANDOM % 9) * 3600 ))
+
+        # 计算下一次的执行时间（当前时间 + 冷却期 + 随机时间）
+        NEXT_TIME=$((CURRENT_TIME + COOL_DOWN_TIME + RANDOM_EXTRA_TIME))
+
+        # 计算下一次的小时和分钟（UTC 时间）
+        NEXT_HOUR=$(date -u -d "@$NEXT_TIME" +'%H')
+        NEXT_MINUTE=$(date -u -d "@$NEXT_TIME" +'%M')
+
+        echo "Next execution time: $NEXT_HOUR:$NEXT_MINUTE UTC"
+        echo "next_cron=$NEXT_MINUTE $NEXT_HOUR * * *" >> $GITHUB_ENV
+
+    - name: Update cron schedule
+      run: |
+        # 动态更新 cron 时间
+        sed -i "s/cron: '.*'/cron: '${{ env.next_cron }}'/g" .github/workflows/wemc-sign.yml
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git commit -am "Update cron to ${{ env.next_cron }}"
+        git push
+
   read-and-access:
+    if: github.event_name != 'schedule' # 执行实际任务
     runs-on: ubuntu-latest
 
     steps:
@@ -21,9 +61,7 @@ jobs:
         WEMC_USERPASSWD: ${{ secrets.WEMC_USERPASSWD }}
       run: |
         sudo apt install tesseract-ocr jq bc -y 
-
         IFS=',' read -r -a up <<< "$WEMC_USERPASSWD"
-
  
         for item in "${up[@]}"; do  
           IFS=':' read -r email password <<< "$item"  
