@@ -42,7 +42,7 @@ jobs:
     - name: Update cron schedule
       run: |
         # 动态更新 cron 时间
-        sed -i "s/cron: '.*'/cron: '${{ env.next_cron }}'/g" .github/workflows/wemc-sign.yml
+        sed -i "s/cron: '.*'/cron: '${{ env.next_cron }}'/g" .github/workflows/wemc.yml
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git commit -am "Update cron to ${{ env.next_cron }}"
