@@ -1,5 +1,4 @@
 name: 自动签到WeMC
-
 on:
   push:
     branches:
@@ -7,6 +6,10 @@ on:
   schedule:
     - cron: '34 12 * * *'  # 初始占位时间，每天 UTC 时间 22:00 运行
   workflow_dispatch:
+
+permissions:
+  contents: write
+  workflows: write
 
 jobs:
   adjust-next-cron:
