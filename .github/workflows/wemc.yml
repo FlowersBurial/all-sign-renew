@@ -9,8 +9,6 @@ on:
 
 permissions:
   contents: write
-  workflows: write
-
 jobs:
   adjust-next-cron:
     if: github.event_name == 'schedule' # 仅在调度触发时运行
